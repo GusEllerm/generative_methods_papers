@@ -20,7 +20,13 @@
         "ms-python.python",
         "rust-lang.rust-analyzer",
         "ms-azuretools.vscode-docker"
-      ]
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": { "path": "/usr/bin/zsh" }
+        }
+      }
     }
   }
 }
