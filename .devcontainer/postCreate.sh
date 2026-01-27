@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -S "${SSH_AUTH_SOCK:-}" ]; then
+  echo "SSH agent detected."
+else
+  echo "No SSH agent detected. Git over SSH may not work; use HTTPS or set up SSH."
+fi
+
 echo "==> Installing Python tooling"
 sudo apt-get update
 sudo apt-get install -y \
