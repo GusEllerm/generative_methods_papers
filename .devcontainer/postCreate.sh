@@ -37,6 +37,42 @@ if [ -f "$HOME/.zshrc" ]; then
   fi
 fi
 
+# Configure Powerlevel10k automatically (skip configuration wizard)
+# Download a pre-built config file if .p10k.zsh doesn't exist
+if [ ! -f "$HOME/.p10k.zsh" ]; then
+  echo "==> Downloading Powerlevel10k configuration..."
+  curl -fsSL https://raw.githubusercontent.com/romkatv/powerlevel10k/master/config/p10k-lean.zsh \
+    -o "$HOME/.p10k.zsh"
+fi
+
+# Ensure .zshrc sources .p10k.zsh and disables configuration wizard
+if [ -f "$HOME/.zshrc" ]; then
+  # Disable configuration wizard to prevent prompts on new terminals
+  # Add this before ZSH_THEME if possible
+  if ! grep -q 'P10K_DISABLE_CONFIGURATION_WIZARD' "$HOME/.zshrc"; then
+    # Try to add after ZSH_THEME line, otherwise append at end
+    if grep -q '^ZSH_THEME=' "$HOME/.zshrc"; then
+      sed -i.bak '/^ZSH_THEME=/a\
+# Disable Powerlevel10k configuration wizard\
+export P10K_DISABLE_CONFIGURATION_WIZARD=true
+' "$HOME/.zshrc"
+    else
+      echo '' >> "$HOME/.zshrc"
+      echo '# Disable Powerlevel10k configuration wizard' >> "$HOME/.zshrc"
+      echo 'export P10K_DISABLE_CONFIGURATION_WIZARD=true' >> "$HOME/.zshrc"
+    fi
+  fi
+  
+  # Add sourcing of .p10k.zsh if not already present (oh-my-zsh template includes this)
+  if ! grep -q '\[\[ ! -f ~/.p10k.zsh \]\]' "$HOME/.zshrc"; then
+    cat >> "$HOME/.zshrc" << 'EOF'
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+EOF
+  fi
+fi
+
 ######################### Project specific setup #########################
 
 echo "==> Installing Python tooling"
@@ -49,11 +85,20 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 echo "==> Enable Corepack + pnpm"
-corepack enable
+sudo corepack enable
 corepack prepare pnpm@latest --activate
+
+echo "==> Installing Stencila wrapper script"
+sudo install -m 755 .devcontainer/stencila-wrapper.sh /usr/local/bin/stencila-wrapper.sh
+sudo ln -sf /usr/local/bin/stencila-wrapper.sh /usr/local/bin/stencila
 
 echo "==> Versions:"
 python3 --version
 node --version
 pnpm --version
 rustc --version
+
+echo ""
+echo "==> Stencila integration ready!"
+echo "   Use 'stencila' or 'stencila-wrapper.sh' to run Stencila commands"
+echo "   Example: stencila --version"

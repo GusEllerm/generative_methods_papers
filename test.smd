@@ -1,0 +1,13 @@
+### Some stencila document
+
+
+```python exec
+x = 10
+
+y = x + 20 
+
+print(y)
+```
+
+The value of x is {{ x }}. 
+The value of y is {{ y }}.

@@ -1,0 +1,44 @@
+services:
+  # Main development container
+  generative-methods:
+    image: mcr.microsoft.com/devcontainers/rust:1-1-bookworm
+    container_name: generative-methods
+    depends_on:
+      - stencila-tool
+    volumes:
+      # Workspace mount - VS Code will also mount this, but we need it for docker-compose
+      - .:/workspaces/generative_methods
+      # SSH agent mount for git operations
+      - /run/host-services/ssh-auth.sock:/ssh-agent
+      # Docker socket: use host Docker daemon (run docker/cli from inside this container)
+      - /var/run/docker.sock:/var/run/docker.sock
+      - stencila-cargo-cache:/home/vscode/.cargo
+    environment:
+      - SSH_AUTH_SOCK=/ssh-agent
+      - STENCILA_BINARY=/workspace/target/debug/stencila
+      - STENCILA_CONTAINER=stencila-tool
+    command: sleep infinity
+    networks:
+      - default
+    user: vscode
+    working_dir: /workspaces/generative_methods
+
+  # Stencila tool container (provides the CLI)
+  stencila-tool:
+    build:
+      context: ../custom_stencila
+      dockerfile: .devcontainer/Dockerfile
+    image: stencila-dev-tool
+    container_name: stencila-tool
+    volumes:
+      - ../custom_stencila:/workspace
+      # Project workspace: same path as in generative-methods, so paths resolve correctly
+      - .:/workspaces/generative_methods
+      - stencila-cargo-cache:/home/vscode/.cargo
+    # Keep container running so other containers can exec into it
+    command: tail -f /dev/null
+    networks:
+      - default
+
+volumes:
+  stencila-cargo-cache:
