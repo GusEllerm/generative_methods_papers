@@ -14,9 +14,4 @@ STENCILA_CONTAINER="${STENCILA_CONTAINER:-stencila-tool}"
 
 # Use caller's cwd so relative paths (e.g. test.smd) resolve correctly. The project
 # is mounted at /workspaces/generative_methods in both generative-methods and stencila-tool.
-# Filter out harmless ONNX Runtime CPU vendor warnings (common in containers)
-# Capture output, filter warning, preserve exit code
-output=$(docker exec -w "$(pwd)" "${STENCILA_CONTAINER}" "${STENCILA_BINARY}" "$@" 2>&1)
-exit_code=$?
-echo "$output" | grep -v "onnxruntime cpuid_info warning: Unknown CPU vendor" || true
-exit $exit_code
+docker exec -w "$(pwd)" "${STENCILA_CONTAINER}" "${STENCILA_BINARY}" "$@"
