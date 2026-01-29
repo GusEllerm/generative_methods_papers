@@ -4,7 +4,8 @@ services:
     image: mcr.microsoft.com/devcontainers/rust:1-1-bookworm
     container_name: generative-methods
     depends_on:
-      - stencila-tool
+      stencila-tool:
+        condition: service_healthy
     volumes:
       # Workspace mount - VS Code will also mount this, but we need it for docker-compose
       - .:/workspaces/generative_methods
@@ -35,8 +36,48 @@ services:
       # Project workspace: same path as in generative-methods, so paths resolve correctly
       - .:/workspaces/generative_methods
       - stencila-cargo-cache:/home/vscode/.cargo
-    # Keep container running so other containers can exec into it
-    command: tail -f /dev/null
+    environment:
+      # Set SKIP_STENCILA_BUILD=1 to skip the build on startup
+      - SKIP_STENCILA_BUILD=${SKIP_STENCILA_BUILD:-0}
+    # Resource limits for Rust compilation (memory-intensive)
+    # Note: Ensure Docker Desktop has enough resources allocated:
+    # Docker Desktop > Settings > Resources > Advanced
+    # - Memory: At least 12GB (16GB+ recommended)
+    # - CPUs: At least 6 cores (8+ recommended)
+    deploy:
+      resources:
+        limits:
+          cpus: '6'           # Allocate up to 6 CPU cores for parallel compilation
+          memory: 12G         # 12GB RAM limit for Rust build (debug builds are large)
+        reservations:
+          cpus: '2'           # Reserve at least 2 CPU cores
+          memory: 4G          # Reserve at least 4GB RAM
+    # Always rebuild debug binary on startup (unless explicitly skipped)
+    command: >
+      sh -c "
+        if [ \"$${SKIP_STENCILA_BUILD:-0}\" = \"1\" ]; then
+          echo 'Skipping Stencila build (SKIP_STENCILA_BUILD=1)'
+        else
+          echo 'Building Stencila debug binary (this may take several minutes)...' &&
+          echo 'Using up to 6 CPU cores and 12GB RAM for compilation' &&
+          cd /workspace/rust &&
+          # Run build with error handling - container stays alive even if build fails
+          cargo build --bin stencila 2>&1 || {
+            echo 'Build failed or was interrupted' &&
+            echo 'Container will continue running. Check logs with: docker-compose logs stencila-tool' &&
+            echo 'You can manually rebuild with: docker exec stencila-tool bash -c \"cd /workspace/rust && cargo build --bin stencila\"'
+          } &&
+          echo 'Build process completed'
+        fi &&
+        exec tail -f /dev/null
+      "
+    healthcheck:
+      # Check if binary exists (from build)
+      test: ["CMD", "test", "-x", "/workspace/target/debug/stencila"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 600s  # 10 minutes to allow for full rebuild
     networks:
       - default
 
