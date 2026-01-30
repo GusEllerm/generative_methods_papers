@@ -14,4 +14,5 @@ STENCILA_CONTAINER="${STENCILA_CONTAINER:-stencila-tool}"
 
 # Use caller's cwd so relative paths (e.g. test.smd) resolve correctly. The project
 # is mounted at /workspaces/generative_methods in both generative-methods and stencila-tool.
-docker exec -w "$(pwd)" "${STENCILA_CONTAINER}" "${STENCILA_BINARY}" "$@"
+# Use sudo so we can access Docker socket when vscode is not in the host's docker group.
+sudo docker exec -w "$(pwd)" "${STENCILA_CONTAINER}" "${STENCILA_BINARY}" "$@"
